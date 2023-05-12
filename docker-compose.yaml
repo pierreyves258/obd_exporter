@@ -7,6 +7,8 @@ services:
       dockerfile: containers/obd_exporter/Dockerfile
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
+    ports:
+      - 8080:8080
   prometheus:
     build: containers/prometheus
   grafana:

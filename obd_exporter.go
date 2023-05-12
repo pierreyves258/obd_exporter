@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/rzetterberg/elmobd"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/pierreyves258/elmobd"
 )
 
 type Output map[string]string
@@ -30,23 +31,51 @@ func newOBDSession(serialDevice string) error {
 		return err
 	}
 
+	try := []elmobd.OBDCommand{
+		elmobd.NewEngineLoad(),
+		elmobd.NewCoolantTemperature(),
+		elmobd.NewShortFuelTrim1(),
+		elmobd.NewFuelPressure(),
+		elmobd.NewIntakeManifoldPressure(),
+		elmobd.NewEngineRPM(),
+		elmobd.NewVehicleSpeed(),
+		elmobd.NewTimingAdvance(),
+		elmobd.NewMafAirFlowRate(),
+		elmobd.NewThrottlePosition(),
+		elmobd.NewOBDStandards(),
+		elmobd.NewRuntimeSinceStart(),
+		elmobd.NewIntakeAirTemperature(),
+		elmobd.NewAbsoluteBarometricPressure(),
+		elmobd.NewAmbientTemperature(),
+		elmobd.NewControlModuleVoltage(),
+		elmobd.NewDistSinceDTCClear(),
+		elmobd.NewEngineOilTemperature(),
+		elmobd.NewFuel(),
+		elmobd.NewOdometer(),
+		elmobd.NewRuntimeSinceStart(),
+		elmobd.NewShortFuelTrim1(),
+		elmobd.NewShortFuelTrim2(),
+		elmobd.NewTimingAdvance(),
+		elmobd.NewTransmissionActualGear(),
+	}
+
 	supportedCmds := supported.FilterSupported(
-		elmobd.GetSensorCommands(),
+		try,
 	)
 
 	for {
 		results, err := dev.RunManyOBDCommands(supportedCmds)
+		output := make(Output)
 
 		if err != nil {
 			return err
 		}
 
-		output := make(Output)
-
 		for _, res := range results {
 			output[res.Key()] = res.ValueAsLit()
 		}
 
+		fmt.Printf("%+v\n", output)
 		GlobalOutput.Store(output)
 
 		time.Sleep(time.Millisecond * 10)
@@ -54,17 +83,15 @@ func newOBDSession(serialDevice string) error {
 }
 
 func startOBDReading(serialDevice string) {
-	sleepAmount := 1
+	sleepAmount := 2
 
 	for {
 		log.Println("Starting new OBD session")
-		err := newOBDSession(serialDevice)
+		err := newOBDSession("/dev/ttyUSB0")
 
 		log.Println("OBD session closed by error: ", err)
 
 		GlobalOutput.Store(make(Output))
-
-		sleepAmount *= 2
 
 		log.Printf("Waiting %d seconds before new OBD session\n", sleepAmount)
 		time.Sleep(time.Second * time.Duration(sleepAmount))
